@@ -2,8 +2,11 @@ fastapi
 pydantic
 uvicorn[standard]
 python-multipart
+nltk
+tiktoken
 docling
 numpy
+dotenv
 supabase
 python-dotenv
 postgrest
