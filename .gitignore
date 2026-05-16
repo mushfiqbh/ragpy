@@ -1,0 +1,36 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments (Essential for FastAPI)
+.venv/
+env/
+venv/
+ENV/
+.env
+.flaskenv
+secret/
+downloads/
+
+# FastAPI / Uvicorn
+logs/
+*.log
+
+# Database (SQLAlchemy / Alembic)
+*.db
+*.sqlite3
+instance/
+
+# Distribution / Build
+dist/
+build/
+*.egg-info/
+
+# IDE-specific
+.vscode/
+.idea/
+
+# OS-specific
+.DS_Store
+Thumbs.db

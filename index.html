@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RAG Chat UI</title>
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --panel: #ffffff;
+      --line: #d8dde3;
+      --user: #0f6fff;
+      --bot: #1d8348;
+      --system: #6b7280;
+      --text: #111827;
+    }
+
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--text);
+      max-width: 860px;
+      margin: 24px auto;
+      padding: 0 14px;
+      background: var(--bg);
+    }
+
+    h2 {
+      margin: 0 0 16px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    #controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    #chat {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fafafa;
+      padding: 10px;
+      height: 520px;
+      overflow-y: auto;
+      margin-bottom: 10px;
+    }
+
+    .msg {
+      margin: 10px 0;
+      line-height: 1.35;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .user {
+      text-align: right;
+      color: var(--user);
+      font-weight: 600;
+    }
+
+    .bot {
+      text-align: left;
+      color: var(--bot);
+    }
+
+    .system {
+      text-align: center;
+      color: var(--system);
+      font-size: 12px;
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    #question {
+      flex: 1;
+      min-width: 280px;
+    }
+
+    input, button {
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    button {
+      cursor: pointer;
+      background: #fff;
+    }
+
+    button:hover {
+      background: #f1f5f9;
+    }
+  </style>
+</head>
+<body>
+  <h2>RAG Pipeline Chunking & Retrieval Testing</h2>
+
+  <div class="panel">
+    <div id="chat"></div>
+
+    <div class="row">
+      <input id="question" placeholder="Ask something..." />
+      <label for="topk">Top K</label>
+      <input id="topk" type="number" value="3" min="1" max="10" style="width:70px;" />
+      <button id="askBtn" type="button">Send</button>
+      <button id="healthBtn" type="button">Health</button>
+    </div>
+  </div>
+
+  <script>
+    const API = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost"
+      ? "http://127.0.0.1:8000"
+      : window.location.origin;
+
+    const chat = document.getElementById("chat");
+    const questionInput = document.getElementById("question");
+    const topKInput = document.getElementById("topk");
+
+    function addMessage(text, type = "bot") {
+      const div = document.createElement("div");
+      div.className = "msg " + type;
+      div.textContent = text;
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    async function readJsonSafe(response) {
+      try {
+        return await response.json();
+      } catch {
+        return {};
+      }
+    }
+
+    function errMessage(data, fallback) {
+      if (data && typeof data.detail === "string") return data.detail;
+      if (data && typeof data.error === "string") return data.error;
+      return fallback;
+    }
+
+    async function askQuestion() {
+      const question = questionInput.value.trim();
+      const topK = parseInt(topKInput.value) || 3;
+
+      if (!question) return;
+
+      addMessage(question, "user");
+      questionInput.value = "";
+
+      try {
+        const res = await fetch(`${API}/ask`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question, top_k: topK }),
+        });
+        const data = await readJsonSafe(res);
+
+        if (!res.ok) {
+          throw new Error(errMessage(data, "Query failed"));
+        }
+
+        addMessage(data.answer, "bot");
+        if (data.contexts && data.contexts.length > 0) {
+            console.log("Contexts used:", data.contexts);
+        }
+      } catch (err) {
+        addMessage(`Error: ${err.message}`, "system");
+      }
+    }
+
+    async function getHealth() {
+        try {
+            const res = await fetch(`${API}/health`);
+            const data = await res.json();
+            addMessage(`Health: ${JSON.stringify(data)}`, "system");
+        } catch (err) {
+            addMessage(`Health check failed: ${err.message}`, "system");
+        }
+    }
+
+    document.getElementById("askBtn").onclick = askQuestion;
+    document.getElementById("healthBtn").onclick = getHealth;
+
+    questionInput.onkeydown = (e) => {
+      if (e.key === "Enter") askQuestion();
+    };
+  </script>
+</body>
+</html>
